@@ -1,0 +1,32 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+
+## Rider / VS
+.vs/
+.idea/
+*.userosscache
+*.sln.docstates
+
+## Test results
+[Tt]est[Rr]esult*/
+*.trx
+*.coverage
+*.coveragexml
+
+## NuGet
+*.nupkg
+*.snupkg
+packages/
+.nuget/
+
+## OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+## Project-local planning documents kept out of the public repository
+ROADMAP.md
+CLAUDE.md

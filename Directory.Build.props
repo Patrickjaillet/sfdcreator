@@ -1,0 +1,26 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)VERSION').Trim())</Version>
+    <BuildRevision Condition="'$(GITHUB_RUN_NUMBER)' != ''">$(GITHUB_RUN_NUMBER)</BuildRevision>
+    <BuildRevision Condition="'$(BuildRevision)' == ''">0</BuildRevision>
+    <AssemblyVersion>$(Version).0</AssemblyVersion>
+    <FileVersion>$(Version).$(BuildRevision)</FileVersion>
+    <InformationalVersion Condition="'$(GITHUB_RUN_NUMBER)' != ''">$(Version)+$(GITHUB_RUN_NUMBER)</InformationalVersion>
+    <InformationalVersion Condition="'$(GITHUB_RUN_NUMBER)' == ''">$(Version)</InformationalVersion>
+    <Product>SFD Creator</Product>
+    <Company>SANDEFJORD DEVELOPMENT</Company>
+    <Copyright>Copyright © 2026 SANDEFJORD DEVELOPMENT</Copyright>
+    <Authors>Patrick JAILLET</Authors>
+  </PropertyGroup>
+
+</Project>

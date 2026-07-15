@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SFDCreator.App/SFDCreator.App.csproj" />
+    <Project Path="src/SFDCreator.Audio/SFDCreator.Audio.csproj" />
+    <Project Path="src/SFDCreator.Core/SFDCreator.Core.csproj" />
+    <Project Path="src/SFDCreator.IO/SFDCreator.IO.csproj" />
+    <Project Path="src/SFDCreator.Rendering/SFDCreator.Rendering.csproj" />
+    <Project Path="src/SFDCreator.Tools/SFDCreator.Tools.csproj" />
+    <Project Path="src/SFDCreator.UI/SFDCreator.UI.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SFDCreator.Core.Tests/SFDCreator.Core.Tests.csproj" />
+  </Folder>
+</Solution>

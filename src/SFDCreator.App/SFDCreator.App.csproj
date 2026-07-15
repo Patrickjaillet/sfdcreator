@@ -1,0 +1,18 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\SFDCreator.Core\SFDCreator.Core.csproj" />
+    <ProjectReference Include="..\SFDCreator.Rendering\SFDCreator.Rendering.csproj" />
+    <ProjectReference Include="..\SFDCreator.UI\SFDCreator.UI.csproj" />
+    <ProjectReference Include="..\SFDCreator.Audio\SFDCreator.Audio.csproj" />
+    <ProjectReference Include="..\SFDCreator.IO\SFDCreator.IO.csproj" />
+    <ProjectReference Include="..\SFDCreator.Tools\SFDCreator.Tools.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>SFDCreator</AssemblyName>
+    <RootNamespace>SFDCreator.App</RootNamespace>
+  </PropertyGroup>
+
+</Project>
