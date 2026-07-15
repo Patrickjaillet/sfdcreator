@@ -1,3 +1,4 @@
+using SFDCreator.Core.Timeline.Sync;
 using SFDCreator.UI.Hosting;
 using SFDCreator.UI.Theming;
 using SkiaSharp;
@@ -22,6 +23,14 @@ public sealed class TimelinePanelContent : IUiPanelContent
         _model = model;
     }
 
+    public Action<int, float>? KeyframeMoved { get; set; }
+
+    public Action<float>? PlayheadScrubbed { get; set; }
+
+    public Func<float, float>? SnapToGrid { get; set; }
+
+    public BpmGrid? Grid { get; set; }
+
     public void Render(SKCanvas canvas, SKRect bounds, UiInputState input)
     {
         var theme = UiTheme.Current;
@@ -37,6 +46,23 @@ public sealed class TimelinePanelContent : IUiPanelContent
 
         using var rulerPaint = new SKPaint { IsAntialias = true, Color = theme.Border, Style = SKPaintStyle.Fill };
         canvas.DrawRect(new SKRect(bounds.Left, bounds.Top, bounds.Right, bounds.Top + RulerHeight), rulerPaint);
+
+        if (Grid is { } grid && grid.BeatDurationSeconds > 0f)
+        {
+            using var gridPaint = new SKPaint { IsAntialias = true, Color = theme.Border, StrokeWidth = 1f };
+            var beatCount = (int)(_model.DurationSeconds / grid.BeatDurationSeconds) + 1;
+            for (var beat = 0; beat <= beatCount; beat++)
+            {
+                var beatTime = grid.BeatToTime(beat);
+                if (beatTime > _model.DurationSeconds)
+                {
+                    break;
+                }
+
+                var x = _model.TimeToPixel(beatTime, rulerLeft, rulerWidth);
+                canvas.DrawLine(x, bounds.Top + RulerHeight, x, bounds.Bottom, gridPaint);
+            }
+        }
 
         using var tickPaint = new SKPaint { IsAntialias = true, Color = theme.TextMuted, StrokeWidth = 1f };
         var tickCount = Math.Max((int)_model.DurationSeconds, 1);
@@ -85,18 +111,29 @@ public sealed class TimelinePanelContent : IUiPanelContent
             else
             {
                 _draggingPlayhead = true;
-                _model.PlayheadSeconds = _model.PixelToTime(input.MouseX, rulerLeft, rulerWidth);
+                var time = _model.PixelToTime(input.MouseX, rulerLeft, rulerWidth);
+                _model.PlayheadSeconds = time;
+                PlayheadScrubbed?.Invoke(time);
             }
         }
         else if (input.IsLeftDown)
         {
             if (_draggingKeyframeIndex is { } index)
             {
-                _model.MoveKeyframe(index, _model.PixelToTime(input.MouseX, rulerLeft, rulerWidth));
+                var time = _model.PixelToTime(input.MouseX, rulerLeft, rulerWidth);
+                if (SnapToGrid is not null)
+                {
+                    time = SnapToGrid(time);
+                }
+
+                _model.MoveKeyframe(index, time);
+                KeyframeMoved?.Invoke(index, time);
             }
             else if (_draggingPlayhead)
             {
-                _model.PlayheadSeconds = _model.PixelToTime(input.MouseX, rulerLeft, rulerWidth);
+                var time = _model.PixelToTime(input.MouseX, rulerLeft, rulerWidth);
+                _model.PlayheadSeconds = time;
+                PlayheadScrubbed?.Invoke(time);
             }
         }
 

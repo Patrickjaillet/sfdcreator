@@ -2,6 +2,12 @@ using System.Numerics;
 using SFDCreator.App;
 using SFDCreator.Core.Plugins;
 using SFDCreator.Core.Settings;
+using SFDCreator.Core.Timeline.Automation;
+using SFDCreator.Core.Timeline.Interpolation;
+using SFDCreator.Core.Timeline.Playback;
+using SFDCreator.Core.Timeline.Sequencing;
+using SFDCreator.Core.Timeline.Sync;
+using SFDCreator.Core.Timeline.UndoRedo;
 using SFDCreator.IO.Settings;
 using SFDCreator.Rendering.Backend;
 using SFDCreator.Rendering.Cameras;
@@ -27,7 +33,13 @@ const int CommandFileOpen = 1001;
 const int CommandFileSave = 1002;
 const int CommandFileExit = 1003;
 const int CommandHelpAbout = 2001;
+const int CommandPlaybackToggle = 3001;
 const float CameraPathDuration = 12f;
+const int RotationTrackKeyframeOffset = 3;
+
+var rotationSpeed = 0.6f;
+var playbackController = new TimelinePlaybackController();
+playbackController.Play();
 
 var services = new ServiceRegistry();
 var pluginManager = new PluginManager(services);
@@ -86,6 +98,18 @@ void HandleCommand(int commandId)
         case CommandHelpAbout:
             NativeMessageBox.Show(window.Handle, "SFD Creator\nCopyright (c) 2026 SANDEFJORD DEVELOPMENT", "About SFD Creator");
             break;
+
+        case CommandPlaybackToggle:
+            if (playbackController.IsPlaying)
+            {
+                playbackController.Pause();
+            }
+            else
+            {
+                playbackController.Play();
+            }
+
+            break;
     }
 }
 
@@ -132,14 +156,34 @@ var camera = new PerspectiveCamera
     AspectRatio = initialWidth / (float)initialHeight,
 };
 
-var cameraPath = new CameraPathAnimator(new[]
+var forwardCameraKeyframes = new[]
 {
     new CameraPathKeyframe(0f, new Vector3(0f, 1.5f, 4f), Vector3.Zero),
-    new CameraPathKeyframe(3f, new Vector3(3.5f, 1f, 0f), Vector3.Zero),
-    new CameraPathKeyframe(6f, new Vector3(0f, 1.5f, -4f), Vector3.Zero),
-    new CameraPathKeyframe(9f, new Vector3(-3.5f, 1f, 0f), Vector3.Zero),
+    new CameraPathKeyframe(2f, new Vector3(3.5f, 1f, 0f), Vector3.Zero),
+    new CameraPathKeyframe(4f, new Vector3(0f, 1.5f, -4f), Vector3.Zero),
+    new CameraPathKeyframe(6f, new Vector3(-3.5f, 1f, 0f), Vector3.Zero),
+};
+
+var reverseCameraKeyframes = new[]
+{
+    new CameraPathKeyframe(6f, new Vector3(-3.5f, 1f, 0f), Vector3.Zero),
+    new CameraPathKeyframe(8f, new Vector3(0f, 2.5f, -3f), Vector3.Zero),
+    new CameraPathKeyframe(10f, new Vector3(3.5f, 1f, 0f), Vector3.Zero),
     new CameraPathKeyframe(12f, new Vector3(0f, 1.5f, 4f), Vector3.Zero),
-});
+};
+
+var masterTimeline = new MasterTimeline();
+masterTimeline.AddSegment(new TimelineSegment("Forward", 0f, 6f, TransitionSpec.Cut));
+masterTimeline.AddSegment(new TimelineSegment("Reverse", 6f, 6f, new TransitionSpec(TransitionKind.Crossfade, 1f)));
+
+var rotationCurve = new AnimationCurve();
+rotationCurve.AddKeyframe(new FloatKeyframe(0f, 0.2f, InterpolationMode.Bezier, OutTangent: 0.3f));
+rotationCurve.AddKeyframe(new FloatKeyframe(6f, 1.5f, InterpolationMode.Bezier, InTangent: 0.3f, OutTangent: -0.3f));
+rotationCurve.AddKeyframe(new FloatKeyframe(12f, 0.2f, InterpolationMode.Bezier, InTangent: -0.3f));
+var rotationAutomation = new AnimatedFloatProperty(rotationCurve, value => rotationSpeed = value);
+
+var bpmGrid = new BpmGrid(bpm: 120f, beatsPerBar: 4);
+var undoRedoStack = new UndoRedoStack();
 
 var scenePass = new ScenePass(sceneShader, cubeVao, cubeIndexCount) { Writes = new[] { sceneTarget } };
 
@@ -151,8 +195,6 @@ var performanceOverlayPass = new PerformanceOverlayPass(gl, shaderDirectory);
 
 var clock = new FrameClock();
 var stats = new FrameStats();
-
-var rotationSpeed = 0.6f;
 
 dockPanels.PanelResized += (region, width, height) =>
 {
@@ -173,7 +215,11 @@ dockPanels.PanelResized += (region, width, height) =>
 var toolbarContent = new ToolbarPanelContent(
     ("Open", CommandFileOpen),
     ("Save", CommandFileSave),
-    ("Exit", CommandFileExit));
+    ("Exit", CommandFileExit))
+{
+    PlaybackToggleCommandId = CommandPlaybackToggle,
+    IsPlaying = () => playbackController.IsPlaying,
+};
 toolbarContent.CommandInvoked += HandleCommand;
 using var toolbarHost = new SkiaPanelHost(dockPanels.GetPanel(DockRegion.Top), toolbarContent);
 
@@ -202,10 +248,67 @@ timelineModel.AddTrack("Rotation");
 timelineModel.AddKeyframe(0, 0f);
 timelineModel.AddKeyframe(0, 6f);
 timelineModel.AddKeyframe(0, 12f);
-timelineModel.AddKeyframe(1, 3f);
-timelineModel.AddKeyframe(1, 9f);
-var timelineContent = new TimelinePanelContent(timelineModel);
+foreach (var keyframe in rotationCurve.Keyframes)
+{
+    timelineModel.AddKeyframe(1, keyframe.Time);
+}
+
+void SyncRotationTrackVisuals()
+{
+    for (var i = 0; i < rotationCurve.Keyframes.Count; i++)
+    {
+        timelineModel.MoveKeyframe(RotationTrackKeyframeOffset + i, rotationCurve.Keyframes[i].Time);
+    }
+}
+
+var timelineContent = new TimelinePanelContent(timelineModel)
+{
+    Grid = bpmGrid,
+    SnapToGrid = bpmGrid.SnapToGrid,
+};
+
+timelineContent.KeyframeMoved += (index, time) =>
+{
+    if (index < RotationTrackKeyframeOffset)
+    {
+        return;
+    }
+
+    var curveIndex = index - RotationTrackKeyframeOffset;
+    if (curveIndex < 0 || curveIndex >= rotationCurve.Keyframes.Count)
+    {
+        return;
+    }
+
+    var oldTime = rotationCurve.Keyframes[curveIndex].Time;
+    undoRedoStack.Do(new MoveKeyframeCommand(rotationCurve, oldTime, time));
+    SyncRotationTrackVisuals();
+};
+
+timelineContent.PlayheadScrubbed += time => playbackController.Seek(time);
+
 using var timelineHost = new SkiaPanelHost(dockPanels.GetPanel(DockRegion.Bottom), timelineContent);
+
+var keyboard = window.Input.Keyboards[0];
+keyboard.KeyDown += (_, key, _) =>
+{
+    var ctrlHeld = keyboard.IsKeyPressed(Key.ControlLeft) || keyboard.IsKeyPressed(Key.ControlRight);
+    if (!ctrlHeld)
+    {
+        return;
+    }
+
+    if (key == Key.Z)
+    {
+        undoRedoStack.Undo();
+        SyncRotationTrackVisuals();
+    }
+    else if (key == Key.Y)
+    {
+        undoRedoStack.Redo();
+        SyncRotationTrackVisuals();
+    }
+};
 
 window.RunWithIdle(() =>
 {
@@ -214,10 +317,32 @@ window.RunWithIdle(() =>
     var delta = clock.Tick();
     stats.Record(delta);
 
-    var pathTime = clock.TotalSeconds % CameraPathDuration;
-    cameraPath.Apply(camera, pathTime);
+    playbackController.Tick(delta);
+    var time = playbackController.CurrentTime;
+
+    var blend = masterTimeline.Evaluate(time);
+    var (currentPosition, currentLookAt) = blend.Current.Name == "Forward"
+        ? CameraPath.Evaluate(forwardCameraKeyframes, time)
+        : CameraPath.Evaluate(reverseCameraKeyframes, time);
+
+    if (blend.Next is { } nextSegment)
+    {
+        var (nextPosition, nextLookAt) = nextSegment.Name == "Forward"
+            ? CameraPath.Evaluate(forwardCameraKeyframes, time)
+            : CameraPath.Evaluate(reverseCameraKeyframes, time);
+
+        camera.Position = Vector3.Lerp(currentPosition, nextPosition, blend.BlendWeight);
+        camera.Target = Vector3.Lerp(currentLookAt, nextLookAt, blend.BlendWeight);
+    }
+    else
+    {
+        camera.Position = currentPosition;
+        camera.Target = currentLookAt;
+    }
+
+    rotationAutomation.Apply(time);
     scenePass.RotationRadians += delta * rotationSpeed;
-    timelineModel.PlayheadSeconds = pathTime;
+    timelineModel.PlayheadSeconds = time;
 
     var context = new RenderGraphContext
     {

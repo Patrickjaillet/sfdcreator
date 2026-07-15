@@ -16,6 +16,10 @@ public sealed class ToolbarPanelContent : IUiPanelContent
 
     public event Action<int>? CommandInvoked;
 
+    public int? PlaybackToggleCommandId { get; set; }
+
+    public Func<bool>? IsPlaying { get; set; }
+
     public void Render(SKCanvas canvas, SKRect bounds, UiInputState input)
     {
         var theme = UiTheme.Current;
@@ -27,6 +31,19 @@ public sealed class ToolbarPanelContent : IUiPanelContent
         const float buttonWidth = 76f;
         var x = 8f;
         var y = (bounds.Height - buttonHeight) / 2f;
+
+        if (PlaybackToggleCommandId is { } toggleCommandId && IsPlaying is not null)
+        {
+            var label = IsPlaying() ? "Pause" : "Play";
+            var rect = new SKRect(x, y, x + buttonWidth, y + buttonHeight);
+
+            if (UiWidgets.Button(canvas, rect, label, input, theme))
+            {
+                CommandInvoked?.Invoke(toggleCommandId);
+            }
+
+            x += buttonWidth + 6f;
+        }
 
         foreach (var (label, commandId) in _buttons)
         {

@@ -4,6 +4,30 @@ All notable changes to SFD Creator are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] - 2026-07-15
+
+### Added
+
+- A new `SFDCreator.Core/Timeline` module — framework-agnostic, no OS/graphics dependency:
+  - `AnimationCurve`/`FloatKeyframe`/`InterpolationMode` (Linear, Bezier via cubic Hermite tangent interpolation, and Stepped).
+  - `AnimatedFloatProperty` — binds a curve to any settable float value (the "automation layer" for parameter curves).
+  - `MasterTimeline`/`TimelineSegment`/`TransitionSpec` — segment sequencing with Cut and Crossfade transitions, looping.
+  - `TimelinePlaybackController` — play/pause/seek/tick with a playback rate.
+  - `BpmGrid` — beat-to-time/time-to-nearest-beat snapping from a manually-set BPM (no audio analysis yet — that's Phase 8).
+  - `UndoRedoStack`/`ICommand`/`MoveKeyframeCommand` — command-pattern undo/redo.
+- The Phase 4 `TimelinePanelContent` widget is now wired to this engine: dragging a keyframe pushes a `MoveKeyframeCommand` through the undo/redo stack, scrubbing the playhead calls `TimelinePlaybackController.Seek`, and beat-grid lines render with optional snap-while-dragging.
+- `ToolbarPanelContent` gained a Play/Pause toggle button reflecting live playback state.
+- The demo scene's rotation speed is now driven by a 3-keyframe Bezier `AnimationCurve` via `AnimatedFloatProperty` (the property-inspector slider still shows/moves but is overwritten by automation each frame, matching how a keyframed property behaves in a real animation tool).
+- A two-segment `MasterTimeline` ("Forward" 0–6s, "Reverse" 6–12s) with a 1-second crossfade — the camera position/look-at now lerp between both segments' independently-keyframed paths during the transition window.
+- Ctrl+Z / Ctrl+Y wired to `UndoRedoStack.Undo()`/`Redo()` via the existing Phase 2 `Win32InputContext` keyboard, no new input path.
+- 42 new unit tests across `AnimationCurveTests`, `AnimatedFloatPropertyTests`, `MasterTimelineTests`, `TimelinePlaybackControllerTests`, `BpmGridTests`, `UndoRedoStackTests`, `MoveKeyframeCommandTests`.
+
+### Scope notes
+
+- BPM sync is grid-only — no audio file is loaded or analyzed; real beat detection from a waveform is Phase 8's job.
+- "Automation" means parameter-curve binding, not an embedded scripting language — that's Phase 14's explicit scope.
+- The timeline widget lets you retime a keyframe (drag horizontally); editing its automated *value* still requires code/the property inspector, not a curve-value-drag gesture in the timeline itself.
+
 ## [0.4.0] - 2026-07-15
 
 ### Added
