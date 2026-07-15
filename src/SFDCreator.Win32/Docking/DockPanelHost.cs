@@ -38,7 +38,15 @@ public sealed class DockPanelHost
         Layout(width, height);
     }
 
+    public event Action<DockRegion, int, int>? PanelResized;
+
     public nint GetPanelHandle(DockRegion region) => _panels[region];
+
+    public (int Width, int Height) GetPanelSize(DockRegion region)
+    {
+        User32.GetClientRect(_panels[region], out var rect);
+        return (rect.Width, rect.Height);
+    }
 
     private void OnHostResized(int width, int height) => Layout(width, height);
 
@@ -49,7 +57,10 @@ public sealed class DockPanelHost
         foreach (var (region, hwnd) in _panels)
         {
             var rect = rects[region];
-            User32.MoveWindow(hwnd, rect.X, rect.Y, Math.Max(rect.Width, 0), Math.Max(rect.Height, 0), true);
+            var panelWidth = Math.Max(rect.Width, 0);
+            var panelHeight = Math.Max(rect.Height, 0);
+            User32.MoveWindow(hwnd, rect.X, rect.Y, panelWidth, panelHeight, true);
+            PanelResized?.Invoke(region, panelWidth, panelHeight);
         }
     }
 }

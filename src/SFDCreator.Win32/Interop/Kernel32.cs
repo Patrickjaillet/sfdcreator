@@ -15,6 +15,6 @@ internal static class Kernel32
     [DllImport("kernel32.dll", SetLastError = true)]
     public static extern bool GlobalUnlock(nint hMem);
 
-    [DllImport("kernel32.dll")]
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
     public static extern nint GetModuleHandleW(string? lpModuleName);
 }

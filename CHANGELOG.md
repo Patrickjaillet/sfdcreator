@@ -4,6 +4,24 @@ All notable changes to SFD Creator are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] - 2026-07-15
+
+### Added
+
+- Hand-written OpenGL device/context bootstrap (`OpenGlContextFactory`): dummy-context ARB bootstrap followed by a real modern core-profile context (4.6, falling back to 3.3) created directly against a native HWND via WGL — no `Silk.NET.Windowing` dependency.
+- `IGraphicsDevice`/`GraphicsBackendKind`/`GraphicsDeviceFactory` backend-selection abstraction; only OpenGL is implemented, Vulkan/Direct3D11/Direct3D12 throw `NotSupportedException` (same pattern as the Phase 1 Naga stub).
+- GL resource wrappers: `GpuBuffer`, `VertexArray`, `ShaderProgram`, `Texture2D`, `RenderTarget` (framebuffer + color/depth-stencil attachments).
+- A render graph (`RenderGraph`, `RenderPass`, `RenderPassGraphSort`) with pass dependencies resolved via a unit-tested topological sort.
+- A camera system: `PerspectiveCamera`/`OrthographicCamera`, and a Catmull-Rom `CameraPath` for keyframed cinematic camera moves (unit-tested).
+- A post-processing chain (`PostProcessChain`): bloom (bright-pass + separable blur + composite), color grading (lift/gamma/gain + saturation/contrast), CRT scanline/vignette/curvature, and an optional camera-motion directional blur — all plain GLSL, ping-ponged through render targets.
+- Frame diagnostics: `FrameClock` and a rolling-window `FrameStats` (average/min/max FPS), unit-tested.
+- `DockPanelHost.PanelResized` event (Win32 project) so the renderer can resize its render targets/viewport when the center dock panel resizes.
+- A procedural demo scene in `SFDCreator.App` (a rotating multi-colored cube driven by the camera path) proving the whole pipeline end-to-end, rendered into the native window's center dock panel; the render loop now runs continuously via `Win32Window.RunWithIdle` instead of the Phase 2 blocking message loop.
+
+### Fixed
+
+- `GetModuleHandleW` P/Invoke declarations (in both `SFDCreator.Win32` and `SFDCreator.Rendering`) were missing `CharSet = CharSet.Unicode`, causing the ANSI-marshaled module name to fail to resolve `opengl32.dll`'s handle and silently breaking legacy (GL 1.1) function loading (`glEnable` and similar) during OpenGL context bootstrap.
+
 ## [0.2.0] - 2026-07-15
 
 ### Added

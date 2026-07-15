@@ -13,6 +13,9 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/SFDCreator.Core.Tests/SFDCreator.Core.Tests.csproj" />
+    <Project Path="tests/SFDCreator.Rendering.Tests/SFDCreator.Rendering.Tests.csproj">
+      <Platform Project="x64" />
+    </Project>
     <Project Path="tests/SFDCreator.Win32.Tests/SFDCreator.Win32.Tests.csproj">
       <Platform Project="x64" />
     </Project>
