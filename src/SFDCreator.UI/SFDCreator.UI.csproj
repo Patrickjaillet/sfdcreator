@@ -2,6 +2,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SFDCreator.Core\SFDCreator.Core.csproj" />
+    <ProjectReference Include="..\SFDCreator.Win32\SFDCreator.Win32.csproj" />
+    <ProjectReference Include="..\SFDCreator.Rendering\SFDCreator.Rendering.csproj" />
   </ItemGroup>
 
   <ItemGroup>

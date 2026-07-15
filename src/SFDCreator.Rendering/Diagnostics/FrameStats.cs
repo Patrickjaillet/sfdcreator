@@ -13,6 +13,8 @@ public sealed class FrameStats
 
     public int SampleCount => _frameTimes.Count;
 
+    public IReadOnlyList<float> Samples => _frameTimes.ToArray();
+
     public void Record(float deltaSeconds)
     {
         _frameTimes.Enqueue(deltaSeconds);

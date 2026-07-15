@@ -6,10 +6,15 @@ using SFDCreator.IO.Settings;
 using SFDCreator.Rendering.Backend;
 using SFDCreator.Rendering.Cameras;
 using SFDCreator.Rendering.Diagnostics;
+using SFDCreator.Rendering.Gizmos;
 using SFDCreator.Rendering.Graph;
 using SFDCreator.Rendering.OpenGL;
 using SFDCreator.Rendering.PostProcessing;
 using SFDCreator.Rendering.Resources;
+using SFDCreator.UI.Hosting;
+using SFDCreator.UI.Panels;
+using SFDCreator.UI.Panels.NodeGraph;
+using SFDCreator.UI.Panels.Timeline;
 using SFDCreator.Win32;
 using SFDCreator.Win32.Dialogs;
 using SFDCreator.Win32.Docking;
@@ -62,7 +67,7 @@ window.FilesDropped += files =>
     }
 };
 
-window.MenuCommand += commandId =>
+void HandleCommand(int commandId)
 {
     switch (commandId)
     {
@@ -82,7 +87,9 @@ window.MenuCommand += commandId =>
             NativeMessageBox.Show(window.Handle, "SFD Creator\nCopyright (c) 2026 SANDEFJORD DEVELOPMENT", "About SFD Creator");
             break;
     }
-};
+}
+
+window.MenuCommand += HandleCommand;
 
 window.Closing += () =>
 {
@@ -139,8 +146,13 @@ var scenePass = new ScenePass(sceneShader, cubeVao, cubeIndexCount) { Writes = n
 var graph = new RenderGraph();
 graph.AddPass(scenePass);
 
+var gizmoPass = new GizmoPass(gl, shaderDirectory);
+var performanceOverlayPass = new PerformanceOverlayPass(gl, shaderDirectory);
+
 var clock = new FrameClock();
 var stats = new FrameStats();
+
+var rotationSpeed = 0.6f;
 
 dockPanels.PanelResized += (region, width, height) =>
 {
@@ -158,6 +170,43 @@ dockPanels.PanelResized += (region, width, height) =>
     camera.AspectRatio = width / (float)height;
 };
 
+var toolbarContent = new ToolbarPanelContent(
+    ("Open", CommandFileOpen),
+    ("Save", CommandFileSave),
+    ("Exit", CommandFileExit));
+toolbarContent.CommandInvoked += HandleCommand;
+using var toolbarHost = new SkiaPanelHost(dockPanels.GetPanel(DockRegion.Top), toolbarContent);
+
+var propertyInspectorContent = new PropertyInspectorContent(
+    postChain.Bloom,
+    postChain.ColorGrading,
+    postChain.CrtScanline,
+    () => rotationSpeed,
+    value => rotationSpeed = value);
+using var propertyInspectorHost = new SkiaPanelHost(dockPanels.GetPanel(DockRegion.Right), propertyInspectorContent);
+
+var nodeGraphModel = new NodeGraphModel();
+var generatorNode = nodeGraphModel.AddNode("Cube Generator", new Vector2(40, 40), 0, 1);
+var colorNode = nodeGraphModel.AddNode("Color", new Vector2(40, 160), 0, 1);
+var compositeNode = nodeGraphModel.AddNode("Composite", new Vector2(260, 90), 2, 1);
+var outputNode = nodeGraphModel.AddNode("Output", new Vector2(480, 90), 1, 0);
+nodeGraphModel.Connect(generatorNode.Id, 0, compositeNode.Id, 0);
+nodeGraphModel.Connect(colorNode.Id, 0, compositeNode.Id, 1);
+nodeGraphModel.Connect(compositeNode.Id, 0, outputNode.Id, 0);
+var nodeGraphContent = new NodeGraphPanelContent(nodeGraphModel);
+using var nodeGraphHost = new SkiaPanelHost(dockPanels.GetPanel(DockRegion.Left), nodeGraphContent);
+
+var timelineModel = new TimelineModel { DurationSeconds = CameraPathDuration };
+timelineModel.AddTrack("Camera");
+timelineModel.AddTrack("Rotation");
+timelineModel.AddKeyframe(0, 0f);
+timelineModel.AddKeyframe(0, 6f);
+timelineModel.AddKeyframe(0, 12f);
+timelineModel.AddKeyframe(1, 3f);
+timelineModel.AddKeyframe(1, 9f);
+var timelineContent = new TimelinePanelContent(timelineModel);
+using var timelineHost = new SkiaPanelHost(dockPanels.GetPanel(DockRegion.Bottom), timelineContent);
+
 window.RunWithIdle(() =>
 {
     device.MakeCurrent();
@@ -165,8 +214,10 @@ window.RunWithIdle(() =>
     var delta = clock.Tick();
     stats.Record(delta);
 
-    cameraPath.Apply(camera, clock.TotalSeconds % CameraPathDuration);
-    scenePass.RotationRadians += delta * 0.6f;
+    var pathTime = clock.TotalSeconds % CameraPathDuration;
+    cameraPath.Apply(camera, pathTime);
+    scenePass.RotationRadians += delta * rotationSpeed;
+    timelineModel.PlayheadSeconds = pathTime;
 
     var context = new RenderGraphContext
     {
@@ -179,9 +230,13 @@ window.RunWithIdle(() =>
 
     graph.Execute(gl, context);
     postChain.Apply(gl, sceneTarget, (int)sceneTarget.Width, (int)sceneTarget.Height, camera.Projection * camera.View);
+    gizmoPass.Render(gl, camera.View, camera.Projection);
+    performanceOverlayPass.Render(gl, stats, (int)sceneTarget.Width, (int)sceneTarget.Height);
     device.SwapBuffers();
 });
 
+gizmoPass.Dispose();
+performanceOverlayPass.Dispose();
 postChain.Dispose();
 sceneTarget.Dispose();
 cubeVao.Dispose();

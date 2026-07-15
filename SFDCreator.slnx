@@ -16,6 +16,9 @@
     <Project Path="tests/SFDCreator.Rendering.Tests/SFDCreator.Rendering.Tests.csproj">
       <Platform Project="x64" />
     </Project>
+    <Project Path="tests/SFDCreator.UI.Tests/SFDCreator.UI.Tests.csproj">
+      <Platform Project="x64" />
+    </Project>
     <Project Path="tests/SFDCreator.Win32.Tests/SFDCreator.Win32.Tests.csproj">
       <Platform Project="x64" />
     </Project>

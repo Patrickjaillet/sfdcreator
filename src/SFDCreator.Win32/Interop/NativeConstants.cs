@@ -20,6 +20,7 @@ internal static class NativeConstants
     public const uint WM_SIZE = 0x0005;
     public const uint WM_CLOSE = 0x0010;
     public const uint WM_PAINT = 0x000F;
+    public const uint WM_ERASEBKGND = 0x0014;
     public const uint WM_COMMAND = 0x0111;
     public const uint WM_DROPFILES = 0x0233;
     public const uint WM_DPICHANGED = 0x02E0;

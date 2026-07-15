@@ -152,6 +152,9 @@ internal static partial class User32
 
     [DllImport("user32.dll")]
     public static extern int GetSystemMetrics(int nIndex);
+
+    [DllImport("user32.dll")]
+    public static extern bool InvalidateRect(nint hWnd, nint lpRect, bool bErase);
 }
 
 [StructLayout(LayoutKind.Sequential)]

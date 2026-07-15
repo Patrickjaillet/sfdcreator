@@ -1,11 +1,11 @@
-using SFDCreator.Win32.Interop;
-
 namespace SFDCreator.Win32.Docking;
 
 public sealed class DockPanelHost
 {
     private readonly nint _parentHwnd;
-    private readonly Dictionary<DockRegion, nint> _panels = new();
+    private readonly Dictionary<DockRegion, Win32ChildPanel> _panels = new();
+
+    public int TopExtent { get; set; } = 36;
 
     public int LeftExtent { get; set; } = 250;
 
@@ -19,18 +19,7 @@ public sealed class DockPanelHost
 
         foreach (var region in Enum.GetValues<DockRegion>())
         {
-            var child = User32.CreateWindowExW(
-                0,
-                "STATIC",
-                region.ToString(),
-                NativeConstants.WS_CHILD | NativeConstants.WS_VISIBLE,
-                0, 0, 0, 0,
-                _parentHwnd,
-                0,
-                0,
-                0);
-
-            _panels[region] = child;
+            _panels[region] = new Win32ChildPanel(_parentHwnd);
         }
 
         host.Resized += OnHostResized;
@@ -40,26 +29,24 @@ public sealed class DockPanelHost
 
     public event Action<DockRegion, int, int>? PanelResized;
 
-    public nint GetPanelHandle(DockRegion region) => _panels[region];
+    public Win32ChildPanel GetPanel(DockRegion region) => _panels[region];
 
-    public (int Width, int Height) GetPanelSize(DockRegion region)
-    {
-        User32.GetClientRect(_panels[region], out var rect);
-        return (rect.Width, rect.Height);
-    }
+    public nint GetPanelHandle(DockRegion region) => _panels[region].Handle;
+
+    public (int Width, int Height) GetPanelSize(DockRegion region) => _panels[region].ClientSize;
 
     private void OnHostResized(int width, int height) => Layout(width, height);
 
     private void Layout(int width, int height)
     {
-        var rects = DockLayout.Compute(width, height, LeftExtent, RightExtent, BottomExtent);
+        var rects = DockLayout.Compute(width, height, LeftExtent, RightExtent, TopExtent, BottomExtent);
 
-        foreach (var (region, hwnd) in _panels)
+        foreach (var (region, panel) in _panels)
         {
             var rect = rects[region];
             var panelWidth = Math.Max(rect.Width, 0);
             var panelHeight = Math.Max(rect.Height, 0);
-            User32.MoveWindow(hwnd, rect.X, rect.Y, panelWidth, panelHeight, true);
+            Interop.User32.MoveWindow(panel.Handle, rect.X, rect.Y, panelWidth, panelHeight, true);
             PanelResized?.Invoke(region, panelWidth, panelHeight);
         }
     }

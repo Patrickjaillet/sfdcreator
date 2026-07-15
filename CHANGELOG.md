@@ -4,6 +4,23 @@ All notable changes to SFD Creator are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] - 2026-07-15
+
+### Added
+
+- `Win32ChildPanel` (Win32 project): a custom-class child window (own WndProc, same trampoline pattern as `Win32Window`) replacing the Phase 2 `STATIC` dock panels, routing WM_PAINT/mouse/keyboard to managed code. `DockPanelHost` now creates panels from this class and gained a `Top` dock region (toolbar strip) alongside Left/Right/Bottom/Center.
+- SkiaSharp UI hosting layer (`SFDCreator.UI/Hosting`): `SkiaPanelHost` renders a CPU-raster `SKSurface` per panel and blits it via GDI `SetDIBitsToDevice` on each `WM_PAINT`; `IUiPanelContent`/`UiInputState` give panel content an immediate-mode render+input contract.
+- A small immediate-mode widget kit (`UiWidgets`: Button, Slider, Checkbox, Label) and a two-palette theming system (`UiTheme.Dark`/`Light`).
+- Four docked panels wired into the app: a toolbar (routes through the same command handler as the native menu), a property inspector live-bound to the Phase 3 post-processing chain's tunables (bloom threshold/intensity, color-grading saturation/contrast, CRT scanline/vignette/curvature) and cube rotation speed, a node graph editor (drag nodes, drag-to-connect ports, pan/zoom), and a timeline widget (scrub playhead, drag keyframes) synced to the camera path's current time.
+- Native-GL viewport overlays in `SFDCreator.Rendering` — no Skia/GDI alpha compositing involved: `GizmoPass` draws a 3D axis gizmo at the scene origin using the camera's real view/projection matrices, and `PerformanceOverlayPass` draws a live frame-time bar graph (from `FrameStats`) using an identity-MVP screen-space quad batch. Both reuse the existing `scene.vert`/`scene.frag` shader — no new GLSL files.
+- Unit tests: `SliderMathTests`, `NodeGraphModelTests`, `TimelineModelTests` (new `SFDCreator.UI.Tests` project), `PerformanceGraphMathTests` (extends `SFDCreator.Rendering.Tests`), and updated `DockLayoutTests` for the new `Top` region.
+
+### Scope notes
+
+- The node graph editor is visual/interactive only — no compiled/executed effect semantics yet (Phase 6).
+- The timeline widget is visual scrubbing/keyframe-dragging only — no playback/sync engine yet (Phase 5).
+- Gizmos are rendered, not yet drag-to-transform (Phase 12's explicit scope).
+
 ## [0.3.0] - 2026-07-15
 
 ### Added
