@@ -7,12 +7,14 @@
     <ProjectReference Include="..\SFDCreator.Audio\SFDCreator.Audio.csproj" />
     <ProjectReference Include="..\SFDCreator.IO\SFDCreator.IO.csproj" />
     <ProjectReference Include="..\SFDCreator.Tools\SFDCreator.Tools.csproj" />
+    <ProjectReference Include="..\SFDCreator.Win32\SFDCreator.Win32.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <AssemblyName>SFDCreator</AssemblyName>
     <RootNamespace>SFDCreator.App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
 </Project>

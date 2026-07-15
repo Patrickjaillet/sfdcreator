@@ -7,8 +7,14 @@
     <Project Path="src/SFDCreator.Rendering/SFDCreator.Rendering.csproj" />
     <Project Path="src/SFDCreator.Tools/SFDCreator.Tools.csproj" />
     <Project Path="src/SFDCreator.UI/SFDCreator.UI.csproj" />
+    <Project Path="src/SFDCreator.Win32/SFDCreator.Win32.csproj">
+      <Platform Project="x64" />
+    </Project>
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/SFDCreator.Core.Tests/SFDCreator.Core.Tests.csproj" />
+    <Project Path="tests/SFDCreator.Win32.Tests/SFDCreator.Win32.Tests.csproj">
+      <Platform Project="x64" />
+    </Project>
   </Folder>
 </Solution>
